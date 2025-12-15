@@ -9,7 +9,6 @@ import { SuiClientProvider, WalletProvider } from "@mysten/dapp-kit";
 
 const queryClient = new QueryClient();
 
-// Configuração da rede Sui
 const networks = {
   testnet: { url: getFullnodeUrl("testnet") },
   mainnet: { url: getFullnodeUrl("mainnet") }
