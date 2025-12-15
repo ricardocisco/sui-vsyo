@@ -5,7 +5,7 @@ use std::string::String;
 use sui::balance::{Self, Balance};
 use sui::coin::{Self, Coin};
 use sui::event;
-use sui::sui::SUI;
+use usdc::usdc::USDC;
 
 const EMarketNotResolved: u64 = 1;
 const EDeadlinePassed: u64 = 2;
@@ -14,6 +14,8 @@ const EInsufficientAmount: u64 = 4;
 const ENotWinner: u64 = 5;
 const EInvalidOutcome: u64 = 6;
 const EMarketAlreadyResolved: u64 = 7;
+const EInsufficientShares: u64 = 8;
+const EInsufficientLiquidity: u64 = 9;
 
 public struct AdminCap has key, store {
     id: UID,
@@ -22,19 +24,13 @@ public struct AdminCap has key, store {
 public struct Market has key, store {
     id: UID,
     description: String,
-    target_price: u64,
-    asset_symbol: String,
-    pyth_price_feed_id: vector<u8>,
     deadline: u64,
-    yes_pool: Balance<SUI>,
-    no_pool: Balance<SUI>,
-    total_yes_shares: u64,
-    total_no_shares: u64,
-    protocol_fee_rate: u64,
-    protocol_fees: Balance<SUI>,
+    // Fixed price shares
+    yes_shares_sold: u64,
+    no_shares_sold: u64,
+    total_funds: Balance<USDC>,
     resolved: bool,
     outcome: Option<bool>,
-    final_price: Option<u64>,
 }
 
 public struct Position has key, store {
@@ -48,7 +44,6 @@ public struct Position has key, store {
 public struct MarketCreated has copy, drop {
     market_id: ID,
     description: String,
-    target_price: u64,
     deadline: u64,
 }
 
@@ -63,7 +58,14 @@ public struct PositionBought has copy, drop {
 public struct MarketResolved has copy, drop {
     market_id: ID,
     outcome: bool,
-    final_price: u64,
+}
+
+public struct PositionSold has copy, drop {
+    market_id: ID,
+    user: address,
+    is_yes: bool,
+    shares: u64,
+    payout: u64,
 }
 
 public struct WinningsClaimed has copy, drop {
@@ -84,48 +86,27 @@ fun init(ctx: &mut TxContext) {
 public fun create_market(
     _: &AdminCap,
     description: String,
-    target_price: u64,
-    asset_symbol: String,
-    pyth_price_feed_id: vector<u8>,
     deadline: u64,
-    initial_liquidity: Coin<SUI>,
-    protocol_fee_rate: u64,
+    initial_liquidity: Coin<USDC>,
     ctx: &mut TxContext,
 ) {
-    let initial_amount = coin::value(&initial_liquidity);
-    assert!(initial_amount > 0, EInsufficientAmount);
+    let liquidity = coin::value(&initial_liquidity);
+    assert!(liquidity > 0, EInsufficientAmount);
 
-    let mut market = Market {
+    let market = Market {
         id: object::new(ctx),
         description,
-        target_price,
-        asset_symbol,
-        pyth_price_feed_id,
         deadline,
-        yes_pool: balance::zero(),
-        no_pool: balance::zero(),
-        total_yes_shares: 0,
-        total_no_shares: 0,
-        protocol_fee_rate,
-        protocol_fees: balance::zero(),
+        yes_shares_sold: 0,
+        no_shares_sold: 0,
+        total_funds: coin::into_balance(initial_liquidity),
         resolved: false,
         outcome: option::none(),
-        final_price: option::none(),
     };
-
-    let mut initial_balance = coin::into_balance(initial_liquidity);
-    let split_amount = initial_amount / 2;
-
-    balance::join(&mut market.yes_pool, balance::split(&mut initial_balance, split_amount));
-    balance::join(&mut market.no_pool, initial_balance);
-
-    market.total_yes_shares = split_amount;
-    market.total_no_shares = split_amount;
 
     event::emit(MarketCreated {
         market_id: object::uid_to_inner(&market.id),
         description: market.description,
-        target_price: market.target_price,
         deadline: market.deadline,
     });
     transfer::share_object(market)
@@ -134,138 +115,213 @@ public fun create_market(
 public fun resolve_market(
     _: &AdminCap,
     market: &mut Market,
-    final_price: u64,
+    outcome: bool,
     clock: &sui::clock::Clock,
 ) {
     assert!(!market.resolved, EMarketAlreadyResolved);
     assert!(sui::clock::timestamp_ms(clock) >= market.deadline, EDeadlineNotReached);
 
-    let outcome = final_price >= market.target_price;
     market.resolved = true;
     market.outcome = option::some(outcome);
-    market.final_price = option::some(final_price);
 
     event::emit(MarketResolved {
         market_id: object::uid_to_inner(&market.id),
         outcome,
-        final_price,
     })
 }
 
 public fun buy_yes(
     market: &mut Market,
-    payment: Coin<SUI>,
+    payment: Coin<USDC>,
+    shares: u64,
     clock: &sui::clock::Clock,
     ctx: &mut TxContext,
 ) {
-    buy_position(market, payment, true, clock, ctx)
+    buy_position(market, payment, true, shares, clock, ctx)
 }
 
 public fun buy_no(
     market: &mut Market,
-    payment: Coin<SUI>,
+    payment: Coin<USDC>,
+    shares: u64,
     clock: &sui::clock::Clock,
     ctx: &mut TxContext,
 ) {
-    buy_position(market, payment, false, clock, ctx)
+    buy_position(market, payment, false, shares, clock, ctx)
 }
 
-#[allow(unused_variable)]
 fun buy_position(
     market: &mut Market,
-    payment: Coin<SUI>,
+    payment: Coin<USDC>,
     is_yes: bool,
+    shares_to_buy: u64,
     clock: &sui::clock::Clock,
     ctx: &mut TxContext,
 ) {
     assert!(!market.resolved, EMarketAlreadyResolved);
     assert!(sui::clock::timestamp_ms(clock) < market.deadline, EDeadlinePassed);
+    assert!(shares_to_buy > 0, EInsufficientAmount);
+
+    // Fixed price: 1 cent per share (1 USDC = 100 cents)
+    let cost = shares_to_buy; // 1 cent per share, so cost in cents = shares_to_buy
 
     let amount = coin::value(&payment);
-    assert!(amount > 0, EInsufficientAmount);
+    assert!(amount >= cost, EInsufficientAmount);
 
-    let fee_amount = (amount * market.protocol_fee_rate) / 10000;
-    let net_amount = amount - fee_amount;
+    // --- Liquidity check: ensure after buy, funds >= total shares ---
+    let total_shares = market.yes_shares_sold + market.no_shares_sold + shares_to_buy;
+    let future_funds = balance::value(&market.total_funds) + cost;
+    assert!(future_funds >= total_shares, EInsufficientLiquidity);
+    // --- End liquidity check ---
 
     let mut payment_balance = coin::into_balance(payment);
 
-    balance::join(&mut market.protocol_fees, balance::split(&mut payment_balance, fee_amount));
+    // Take cost into total funds
+    balance::join(&mut market.total_funds, balance::split(&mut payment_balance, cost));
 
-    let (shares, pool, total_shares) = if (is_yes) {
-        let shares = if (market.total_yes_shares == 0) {
-            net_amount
-        } else {
-            (net_amount * market.total_yes_shares) / balance::value(&market.yes_pool)
-        };
-        balance::join(&mut market.yes_pool, payment_balance);
-        market.total_yes_shares = market.total_yes_shares + shares;
-        (shares, &market.yes_pool, market.total_yes_shares)
+    // Refund excess
+    if (balance::value(&payment_balance) > 0) {
+        transfer::public_transfer(coin::from_balance(payment_balance, ctx), ctx.sender());
     } else {
-        let shares = if (market.total_no_shares == 0) {
-            net_amount
-        } else {
-            (net_amount * market.total_no_shares) / balance::value(&market.no_pool)
-        };
-        balance::join(&mut market.no_pool, payment_balance);
-        market.total_no_shares = market.total_no_shares + shares;
-        (shares, &market.no_pool, market.total_no_shares)
+        balance::destroy_zero(payment_balance);
+    };
+
+    // Update shares sold
+    if (is_yes) {
+        market.yes_shares_sold = market.yes_shares_sold + shares_to_buy;
+    } else {
+        market.no_shares_sold = market.no_shares_sold + shares_to_buy;
     };
 
     let position = Position {
         id: object::new(ctx),
         market_id: object::uid_to_inner(&market.id),
         is_yes,
-        shares,
-        cost_basis: amount,
+        shares: shares_to_buy,
+        cost_basis: cost,
     };
 
     event::emit(PositionBought {
         market_id: object::uid_to_inner(&market.id),
         user: ctx.sender(),
         is_yes,
-        shares,
-        cost: amount,
+        shares: shares_to_buy,
+        cost,
     });
 
     transfer::transfer(position, ctx.sender());
 }
 
-#[allow(unused_variable)]
+/// Sell entire position back to the market at current price
+public fun sell_position(
+    market: &mut Market,
+    position: Position,
+    clock: &sui::clock::Clock,
+    ctx: &mut TxContext,
+) {
+    assert!(!market.resolved, EMarketAlreadyResolved);
+    assert!(sui::clock::timestamp_ms(clock) < market.deadline, EDeadlinePassed);
+    assert!(position.market_id == object::uid_to_inner(&market.id), EInvalidOutcome);
+
+    let shares = position.shares;
+    let is_yes = position.is_yes;
+
+    // Fixed price: 1 cent per share
+    let payout = shares;
+
+    // Check market has enough liquidity
+    assert!(balance::value(&market.total_funds) >= payout, EInsufficientLiquidity);
+
+    // Burn shares - decrease sold count
+    if (is_yes) {
+        market.yes_shares_sold = market.yes_shares_sold - shares;
+    } else {
+        market.no_shares_sold = market.no_shares_sold - shares;
+    };
+
+    // Pay the seller
+    let payout_balance = balance::split(&mut market.total_funds, payout);
+    transfer::public_transfer(coin::from_balance(payout_balance, ctx), ctx.sender());
+
+    event::emit(PositionSold {
+        market_id: position.market_id,
+        user: ctx.sender(),
+        is_yes,
+        shares,
+        payout,
+    });
+
+    // Destroy the position
+    let Position { id, market_id: _, is_yes: _, shares: _, cost_basis: _ } = position;
+    object::delete(id);
+}
+
+/// Sell partial shares - keeps the position with remaining shares
+public fun sell_partial(
+    market: &mut Market,
+    position: &mut Position,
+    shares_to_sell: u64,
+    clock: &sui::clock::Clock,
+    ctx: &mut TxContext,
+) {
+    assert!(!market.resolved, EMarketAlreadyResolved);
+    assert!(sui::clock::timestamp_ms(clock) < market.deadline, EDeadlinePassed);
+    assert!(position.market_id == object::uid_to_inner(&market.id), EInvalidOutcome);
+    assert!(shares_to_sell > 0 && shares_to_sell <= position.shares, EInsufficientShares);
+
+    let is_yes = position.is_yes;
+
+    // Fixed price: 1 cent per share
+    let payout = shares_to_sell;
+
+    // Check market has enough liquidity
+    assert!(balance::value(&market.total_funds) >= payout, EInsufficientLiquidity);
+
+    // Burn shares - decrease sold count
+    if (is_yes) {
+        market.yes_shares_sold = market.yes_shares_sold - shares_to_sell;
+    } else {
+        market.no_shares_sold = market.no_shares_sold - shares_to_sell;
+    };
+
+    // Update position
+    position.shares = position.shares - shares_to_sell;
+
+    // Pay the seller
+    let payout_balance = balance::split(&mut market.total_funds, payout);
+    transfer::public_transfer(coin::from_balance(payout_balance, ctx), ctx.sender());
+
+    event::emit(PositionSold {
+        market_id: position.market_id,
+        user: ctx.sender(),
+        is_yes,
+        shares: shares_to_sell,
+        payout,
+    });
+}
+
 public fun claim_winnings(market: &mut Market, position: Position, ctx: &mut TxContext) {
     assert!(market.resolved, EMarketNotResolved);
     assert!(position.market_id == object::uid_to_inner(&market.id), EInvalidOutcome);
 
+    // Ensure outcome is Some before dereferencing
+    assert!(option::is_some(&market.outcome), EMarketNotResolved);
     let outcome = *option::borrow(&market.outcome);
     assert!(position.is_yes == outcome, ENotWinner);
 
-    let (winning_pool_value, losing_pool_value, total_winning_shares) = if (outcome) {
-        (balance::value(&market.yes_pool), balance::value(&market.no_pool), market.total_yes_shares)
+    // Winners split the total pool proportionally
+    let total_winning_shares = if (outcome) {
+        market.yes_shares_sold
     } else {
-        (balance::value(&market.no_pool), balance::value(&market.yes_pool), market.total_no_shares)
+        market.no_shares_sold
     };
 
-    let total_pool = winning_pool_value + losing_pool_value;
-    let winnings = (position.shares * total_pool) / total_winning_shares;
+    // Fixed price: 1 cent per share
+    let winnings = position.shares;
 
-    let mut payout_balance = if (outcome) {
-        balance::split(&mut market.yes_pool, winnings)
-    } else {
-        balance::split(&mut market.no_pool, winnings)
-    };
-
-    if (losing_pool_value > 0) {
-        let losing_pool_ref = if (outcome) {
-            &mut market.no_pool
-        } else {
-            &mut market.yes_pool
-        };
-        let losing_share = (position.shares * losing_pool_value) / total_winning_shares;
-        if (losing_share > 0 && balance::value(losing_pool_ref) >= losing_share) {
-            balance::join(&mut payout_balance, balance::split(losing_pool_ref, losing_share));
-        };
-    };
-
+    let payout_balance = balance::split(&mut market.total_funds, winnings);
     let payout_amount = balance::value(&payout_balance);
+
     transfer::public_transfer(coin::from_balance(payout_balance, ctx), ctx.sender());
 
     event::emit(WinningsClaimed {
@@ -278,15 +334,16 @@ public fun claim_winnings(market: &mut Market, position: Position, ctx: &mut TxC
     object::delete(id);
 }
 
+/// Price in basis points (0-10000)
+/// YES price = YES_shares_sold / (YES_shares_sold + NO_shares_sold)
+/// More YES sold = higher YES price (market thinks YES is more likely)
 public fun get_yes_price(market: &Market): u64 {
-    let yes_value = balance::value(&market.yes_pool);
-    let no_value = balance::value(&market.no_pool);
-    let total = yes_value + no_value;
+    let total_sold = market.yes_shares_sold + market.no_shares_sold;
 
-    if (total == 0) {
-        5000
+    if (total_sold == 0) {
+        5000 // 50% starting price
     } else {
-        (yes_value * 10000) / total
+        (market.yes_shares_sold * 10000) / total_sold
     }
 }
 
@@ -294,17 +351,20 @@ public fun get_no_price(market: &Market): u64 {
     10000 - get_yes_price(market)
 }
 
-public fun get_market_info(market: &Market): (String, u64, u64, bool, Option<bool>) {
-    (market.description, market.target_price, market.deadline, market.resolved, market.outcome)
+public fun get_market_info(market: &Market): (String, u64, bool, Option<bool>) {
+    (market.description, market.deadline, market.resolved, market.outcome)
 }
 
-public fun get_market_pools(market: &Market): (u64, u64, u64, u64) {
-    (
-        balance::value(&market.yes_pool),
-        balance::value(&market.no_pool),
-        market.total_yes_shares,
-        market.total_no_shares,
-    )
+public fun get_market_shares(market: &Market): (u64, u64) {
+    (market.yes_shares_sold, market.no_shares_sold)
+}
+
+public fun get_position_info(position: &Position): (ID, bool, u64, u64) {
+    (position.market_id, position.is_yes, position.shares, position.cost_basis)
+}
+
+public fun get_total_funds(market: &Market): u64 {
+    balance::value(&market.total_funds)
 }
 
 #[test_only]
