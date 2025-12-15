@@ -7,7 +7,10 @@ edition = "2024.beta" # edition = "legacy" to use legacy (pre-2024) Move
 
 [dependencies]
 usdc = { git = "https://github.com/circlefin/stablecoin-sui.git", subdir = "packages/usdc", rev = "master" }
-Sui = { override = true, local = "../../../crates/sui-framework/packages/sui-framework" }
+# Sui dependency: removed local override to allow automatic injection or
+# to rely on explicit remote dependency if needed. If you need a local
+# override, set `Sui = { override = true, local = "<path>" }` pointing
+# to the correct local sui-framework path.
 
 # For remote import, use the `{ git = "...", subdir = "...", rev = "..." }`.
 # Revision can be a branch, a tag, and a commit hash.
@@ -41,11 +44,6 @@ rev = "sui-contract-testnet"
 git = "https://github.com/wormhole-foundation/wormhole.git"
 subdir = "sui/wormhole"
 rev = "sui/testnet"
-
-[dependencies.Sui]
-git = "https://github.com/MystenLabs/sui.git"
-subdir = "crates/sui-framework/packages/sui-framework"
-rev = "041c5f2bae2fe52079e44b70514333532d69f4e6"
 
 [dev-addresses]
 # The dev-addresses section allows overwriting named addresses for the `--test`
