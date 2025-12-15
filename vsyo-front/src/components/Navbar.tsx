@@ -31,13 +31,13 @@ export function Navbar() {
                 </a>
                 <a
                   href="/portfolio"
-                  className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+                  className="text-sm font-medium transition-colors hover:text-foreground"
                 >
                   Portfolio
                 </a>
                 <a
                   href="/help"
-                  className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+                  className="text-sm font-medium transition-colors hover:text-foreground"
                 >
                   Help
                 </a>

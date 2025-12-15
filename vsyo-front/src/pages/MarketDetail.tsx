@@ -293,19 +293,19 @@ export default function MarketDetail() {
                     className={cn(
                       "p-4 rounded-xl border-2 transition-all text-center",
                       selectedOutcome === "yes"
-                        ? "border-success bg-success/10 glow-success"
-                        : "border-border hover:border-success/50"
+                        ? "border-green-500 bg-green-500/10 glow-green-500"
+                        : "border-border hover:border-green-500/50"
                     )}
                   >
                     <CheckCircle
                       className={cn(
                         "w-6 h-6 mx-auto mb-2",
                         selectedOutcome === "yes"
-                          ? "text-success"
+                          ? "text-green-500"
                           : "text-muted-foreground"
                       )}
                     />
-                    <div className="text-2xl font-bold text-success">
+                    <div className="text-2xl font-bold text-green-500">
                       {yesPercentage}%
                     </div>
                     <div className="text-xs text-muted-foreground mt-1">
@@ -347,7 +347,7 @@ export default function MarketDetail() {
                 {/* Probability Bar */}
                 <div className="h-2 bg-secondary rounded-full overflow-hidden">
                   <div
-                    className="h-full bg-linear-to-r from-success to-success/70 rounded-full transition-all duration-500"
+                    className="h-full bg-linear-to-r from-green-500 to-green-500/70 rounded-full transition-all duration-500"
                     style={{ width: `${yesPercentage}%` }}
                   />
                 </div>
