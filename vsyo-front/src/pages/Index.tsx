@@ -4,11 +4,13 @@ import { Footer } from "../components/Footer";
 import { FilterTags } from "../components/FilterTags";
 // import { Header } from "../components/Header";
 import { Navbar } from "../components/Navbar";
-import { mockMarkets } from "../lib/mockMarkets";
+// import { mockMarkets } from "../lib/mockMarkets";
+import { useMarketList } from "../hooks/useMarketList";
 
 const Index = () => {
   //   const [selectedTab, setSelectedTab] = useState("trending");
   const [selectedFilter, setSelectedFilter] = useState("all");
+  const { data: markets, isPending, error } = useMarketList();
 
   return (
     <div className="min-h-screen bg-background">
@@ -20,15 +22,35 @@ const Index = () => {
       />
 
       <main className="mx-auto container py-4 px-4">
-        {/* Markets Grid */}
+        {isPending && (
+          <div className="p-10 text-center">
+            Carregando mercados da blockchain...
+          </div>
+        )}
+        {error && (
+          <div className="p-10 text-red-500">
+            Erro ao carregar mercados: {error.message}
+          </div>
+        )}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-          {mockMarkets.map((market) => (
+          {/* {mockMarkets.map((market) => (
             <MarketCard
               key={market.id}
               {...market}
               options={market.options ?? []}
             />
-          ))}
+          ))} */}
+          {markets?.length === 0 ? (
+            <p>Nenhum mercado encontrado. Seja o primeiro a criar um!</p>
+          ) : (
+            <div
+              style={{ display: "flex", flexDirection: "column", gap: "15px" }}
+            >
+              {markets?.map((market) => (
+                <MarketCard key={market.marketId} id={market.marketId} />
+              ))}
+            </div>
+          )}
         </div>
       </main>
 
