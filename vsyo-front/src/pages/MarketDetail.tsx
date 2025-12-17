@@ -1,18 +1,15 @@
 import { useState } from "react";
 import { useParams, Link } from "react-router-dom";
-
-import { mockMarkets } from "../lib/mockMarkets";
 import {
   ArrowLeft,
   Clock,
   Users,
   TrendingUp,
-  ExternalLink,
   Info,
   Wallet,
-  AlertTriangle,
   CheckCircle,
-  XCircle
+  XCircle,
+  Loader2
 } from "lucide-react";
 
 import {
@@ -29,7 +26,19 @@ import { cn } from "../lib/utils";
 import { Input } from "../components/ui/input";
 import { Footer } from "../components/Footer";
 
-// Mock chart data
+// Hooks Reais
+import { useGetMarket } from "../hooks/useGetMarket";
+import { useBuyYes } from "../hooks/useBuyYes";
+import { useBuyNo } from "../hooks/useBuyNo";
+import { useCurrentAccount, ConnectButton } from "@mysten/dapp-kit";
+import { AdminMarketControls } from "../components/AdminMarketControls";
+import { UserPositions } from "../components/UserPositions";
+
+// Constantes de conversão
+const COIN_DECIMALS = 6;
+const DECIMAL_FACTOR = Math.pow(10, COIN_DECIMALS); // 1.000.000
+
+// Mock chart data (Isso ainda pode ser mockado visualmente pois não temos histórico on-chain)
 const generateChartData = (basePrice: number) => {
   const data = [];
   let price = basePrice - 0.15;
@@ -49,19 +58,39 @@ const timeFilters = ["1H", "1D", "1S", "1M", "ALL"];
 
 export default function MarketDetail() {
   const { id } = useParams();
-  const market = mockMarkets.find((m) => m.id === id);
+  const account = useCurrentAccount();
+
+  // 1. Busca dados reais
+  const { data: market, isPending, error } = useGetMarket(id || "");
+  const { buyYes } = useBuyYes();
+  const { buyNo } = useBuyNo();
 
   const [selectedOutcome, setSelectedOutcome] = useState<"yes" | "no">("yes");
   const [amount, setAmount] = useState("");
   const [timeFilter, setTimeFilter] = useState("1M");
-  const [isConnected] = useState(true);
+  const [isBuying, setIsBuying] = useState(false);
 
-  if (!market) {
+  // Estados de Loading
+  if (isPending) {
     return (
-      <div className="min-h-screen bg-background">
+      <div className="min-h-screen bg-background flex flex-col">
         <Navbar />
-        <div className="container py-16 text-center">
+        <div className="flex-1 flex items-center justify-center">
+          <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        </div>
+      </div>
+    );
+  }
+
+  if (error || !market) {
+    return (
+      <div className="min-h-screen bg-background flex flex-col">
+        <Navbar />
+        <div className="container py-16 text-center flex-1">
           <h1 className="text-2xl font-bold mb-4">Mercado não encontrado</h1>
+          <p className="text-muted-foreground mb-6">
+            O ID fornecido não existe na blockchain.
+          </p>
           <Button asChild>
             <Link to="/">Voltar para Mercados</Link>
           </Button>
@@ -70,18 +99,61 @@ export default function MarketDetail() {
     );
   }
 
-  const chartData = generateChartData(market.yesPrice);
-  const yesPercentage = Math.round(market.yesPrice * 100);
-  const noPercentage = Math.round(market.noPrice * 100);
+  // 2. Cálculos com dados reais
+  const yesShares = Number(market.yes_shares_sold);
+  const noShares = Number(market.no_shares_sold);
+  const totalShares = yesShares + noShares;
 
-  const currentPrice =
-    selectedOutcome === "yes" ? market.yesPrice : market.noPrice;
-  const estimatedReturn = amount
-    ? (Number(amount) / currentPrice).toFixed(2)
-    : "0.00";
-  const potentialProfit = amount
-    ? (Number(amount) / currentPrice - Number(amount)).toFixed(2)
-    : "0.00";
+  // Probabilidade (0-100)
+  const yesProb =
+    totalShares === 0 ? 50 : Math.round((yesShares / totalShares) * 100);
+  const noProb = 100 - yesProb;
+
+  // Preço estimado (Probabilidade / 100)
+  const yesPrice = yesProb / 100;
+  const noPrice = noProb / 100;
+
+  // Formatação de Volume
+  const volumeUSD = (
+    Number(market.total_funds) / DECIMAL_FACTOR
+  ).toLocaleString("en-US", {
+    style: "currency",
+    currency: "USD"
+  });
+
+  const chartData = generateChartData(yesPrice);
+  const currentPrice = selectedOutcome === "yes" ? yesPrice : noPrice;
+
+  // Cálculos de Retorno (Estimativa simples: Se eu coloco X a preço Y, ganho X/Y shares)
+  // Nota: Isso é uma simplificação. Em AMM real o preço desliza (slippage).
+  const estimatedShares =
+    amount && Number(amount) > 0
+      ? (Number(amount) / currentPrice).toFixed(2)
+      : "0.00";
+
+  const potentialProfit =
+    amount && Number(amount) > 0
+      ? (Number(amount) / currentPrice - Number(amount)).toFixed(2)
+      : "0.00";
+
+  // 3. Handler de Compra Real
+  const handleTrade = () => {
+    if (!amount || Number(amount) <= 0 || !id) return;
+
+    setIsBuying(true);
+
+    // Converte USD input para Shares (Cents)
+    const sharesToBuy = Math.floor(Number(amount) * DECIMAL_FACTOR);
+
+    if (selectedOutcome === "yes") {
+      buyYes(id, sharesToBuy);
+    } else {
+      buyNo(id, sharesToBuy);
+    }
+
+    // Reset loading visual após um tempo
+    setTimeout(() => setIsBuying(false), 3000);
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -106,22 +178,35 @@ export default function MarketDetail() {
                 <div className="flex items-start justify-between gap-4 mb-4">
                   <div>
                     <span className="stat-pill bg-secondary text-muted-foreground mb-3">
-                      {market.category}
+                      Crypto / Tech{" "}
+                      {/* Categoria fixa ou adicionar no contrato depois */}
                     </span>
                     <h1 className="text-2xl md:text-3xl font-bold text-foreground mt-2">
-                      {market.title}
+                      {market.description}
                     </h1>
                   </div>
                   <div className="shrink-0">
-                    <div className="stat-pill bg-success/20 text-success">
-                      <CheckCircle className="w-3 h-3" />
-                      Ativo
+                    <div
+                      className={cn(
+                        "stat-pill",
+                        market.resolved
+                          ? "bg-red-500/20 text-red-500"
+                          : "bg-success/20 text-success"
+                      )}
+                    >
+                      {market.resolved ? (
+                        <XCircle className="w-3 h-3" />
+                      ) : (
+                        <CheckCircle className="w-3 h-3" />
+                      )}
+                      {market.resolved ? "Resolvido" : "Ativo"}
                     </div>
                   </div>
                 </div>
 
                 <p className="text-muted-foreground mb-6">
-                  {market.description}
+                  Este mercado será resolvido quando a fonte de dados confirmar
+                  o resultado.
                 </p>
 
                 {/* Stats Grid */}
@@ -132,31 +217,33 @@ export default function MarketDetail() {
                       <span className="text-xs">Volume</span>
                     </div>
                     <div className="font-mono font-bold text-lg">
-                      ${market.volume}
+                      {volumeUSD}
                     </div>
                   </div>
                   <div className="p-4 rounded-lg bg-secondary/50">
                     <div className="flex items-center gap-2 text-muted-foreground mb-1">
                       <Users className="w-4 h-4" />
-                      <span className="text-xs">Traders</span>
+                      <span className="text-xs">Shares Totais</span>
                     </div>
                     <div className="font-bold text-lg">
-                      {market.traders.toLocaleString()}
+                      {(totalShares / DECIMAL_FACTOR).toFixed(2)}
                     </div>
                   </div>
                   <div className="p-4 rounded-lg bg-secondary/50">
                     <div className="flex items-center gap-2 text-muted-foreground mb-1">
                       <Clock className="w-4 h-4" />
-                      <span className="text-xs">Resolução</span>
+                      <span className="text-xs">Prazo</span>
                     </div>
-                    <div className="font-bold text-lg">{market.endDate}</div>
+                    <div className="font-bold text-lg">
+                      {new Date(Number(market.deadline)).toLocaleDateString()}
+                    </div>
                   </div>
                   <div className="p-4 rounded-lg bg-secondary/50">
                     <div className="flex items-center gap-2 text-muted-foreground mb-1">
                       <Info className="w-4 h-4" />
                       <span className="text-xs">Rede</span>
                     </div>
-                    <div className="font-bold text-lg">Polygon</div>
+                    <div className="font-bold text-lg">Sui Testnet</div>
                   </div>
                 </div>
               </div>
@@ -164,7 +251,9 @@ export default function MarketDetail() {
               {/* Price Chart */}
               <div className="glass rounded-xl p-6">
                 <div className="flex items-center justify-between mb-6">
-                  <h2 className="text-lg font-semibold">Histórico de Preços</h2>
+                  <h2 className="text-lg font-semibold">
+                    Histórico (Simulado)
+                  </h2>
                   <div className="flex items-center gap-1 p-1 bg-secondary/50 rounded-lg">
                     {timeFilters.map((filter) => (
                       <button
@@ -182,7 +271,15 @@ export default function MarketDetail() {
                     ))}
                   </div>
                 </div>
-
+                <div className="my-4">
+                  {market && (
+                    <AdminMarketControls
+                      marketId={market.id.id}
+                      isResolved={market.resolved}
+                      deadline={market.deadline}
+                    />
+                  )}
+                </div>
                 <div className="h-[300px]">
                   <ResponsiveContainer width="100%" height="100%">
                     <AreaChart data={chartData}>
@@ -251,33 +348,6 @@ export default function MarketDetail() {
                   </ResponsiveContainer>
                 </div>
               </div>
-
-              {/* Resolution Details */}
-              <div className="glass rounded-xl p-6">
-                <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                  <Info className="w-5 h-5 text-primary" />
-                  Regras de Resolução
-                </h2>
-                <div className="space-y-4 text-sm text-muted-foreground">
-                  <p>
-                    Este mercado será resolvido como{" "}
-                    <strong className="text-success">SIM</strong> se o evento
-                    descrito ocorrer antes da data de resolução indicada.
-                  </p>
-                  <p>
-                    A resolução será baseada em fontes oficiais verificáveis. Em
-                    caso de ambiguidade, a decisão será tomada pelo comitê de
-                    governança.
-                  </p>
-                  <a
-                    href="#"
-                    className="inline-flex items-center gap-1 text-primary hover:underline"
-                  >
-                    Ver fonte de dados
-                    <ExternalLink className="w-3 h-3" />
-                  </a>
-                </div>
-              </div>
             </div>
 
             {/* Trading Panel */}
@@ -306,13 +376,13 @@ export default function MarketDetail() {
                       )}
                     />
                     <div className="text-2xl font-bold text-green-500">
-                      {yesPercentage}%
+                      {yesProb}%
                     </div>
                     <div className="text-xs text-muted-foreground mt-1">
                       SIM
                     </div>
                     <div className="text-xs font-mono text-muted-foreground">
-                      ${market.yesPrice.toFixed(2)}
+                      ${yesPrice.toFixed(2)}
                     </div>
                   </button>
                   <button
@@ -333,22 +403,21 @@ export default function MarketDetail() {
                       )}
                     />
                     <div className="text-2xl font-bold text-destructive">
-                      {noPercentage}%
+                      {noProb}%
                     </div>
                     <div className="text-xs text-muted-foreground mt-1">
                       NÃO
                     </div>
                     <div className="text-xs font-mono text-muted-foreground">
-                      ${market.noPrice.toFixed(2)}
+                      ${noPrice.toFixed(2)}
                     </div>
                   </button>
                 </div>
 
-                {/* Probability Bar */}
                 <div className="h-2 bg-secondary rounded-full overflow-hidden">
                   <div
                     className="h-full bg-linear-to-r from-green-500 to-green-500/70 rounded-full transition-all duration-500"
-                    style={{ width: `${yesPercentage}%` }}
+                    style={{ width: `${yesProb}%` }}
                   />
                 </div>
               </div>
@@ -359,7 +428,7 @@ export default function MarketDetail() {
                   Comprar {selectedOutcome === "yes" ? "SIM" : "NÃO"}
                 </h3>
 
-                {isConnected ? (
+                {account ? (
                   <>
                     <div className="space-y-4">
                       <div>
@@ -390,6 +459,22 @@ export default function MarketDetail() {
                           ))}
                         </div>
                       </div>
+                      <div className="glass rounded-xl p-6">
+                        <h3 className="font-semibold mb-4">Minha Posição</h3>
+                        {account ? (
+                          <UserPositions
+                            marketId={id || ""}
+                            isResolved={market?.resolved || false}
+                            winningOutcome={
+                              market?.outcome?.fields?.val ?? null
+                            }
+                          />
+                        ) : (
+                          <div className="text-center text-sm text-muted-foreground">
+                            Conecte sua carteira para ver suas posições.
+                          </div>
+                        )}
+                      </div>
 
                       {/* Calculation Summary */}
                       <div className="p-4 rounded-lg bg-secondary/50 space-y-2">
@@ -403,9 +488,9 @@ export default function MarketDetail() {
                         </div>
                         <div className="flex justify-between text-sm">
                           <span className="text-muted-foreground">
-                            Contratos
+                            Contratos Estimados
                           </span>
-                          <span className="font-mono">{estimatedReturn}</span>
+                          <span className="font-mono">{estimatedShares}</span>
                         </div>
                         <div className="flex justify-between text-sm">
                           <span className="text-muted-foreground">
@@ -415,31 +500,33 @@ export default function MarketDetail() {
                             +${potentialProfit}
                           </span>
                         </div>
-                        <div className="border-t border-border pt-2 mt-2">
-                          <div className="flex justify-between">
-                            <span className="font-medium">Retorno Total</span>
-                            <span className="font-mono font-bold text-success">
-                              ${estimatedReturn}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Fees Notice */}
-                      <div className="flex items-start gap-2 p-3 rounded-lg bg-warning/10 text-warning text-xs">
-                        <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
-                        <span>
-                          Taxa de protocolo: 2% • Taxa de rede: ~$0.01
-                        </span>
                       </div>
 
                       <Button
                         size="lg"
                         className="w-full"
-                        disabled={!amount || Number(amount) <= 0}
+                        onClick={handleTrade}
+                        disabled={
+                          !amount ||
+                          Number(amount) <= 0 ||
+                          isBuying ||
+                          market.resolved
+                        }
                       >
-                        Comprar {selectedOutcome === "yes" ? "SIM" : "NÃO"}
+                        {isBuying ? (
+                          <>
+                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />{" "}
+                            Processando...
+                          </>
+                        ) : (
+                          `Comprar ${selectedOutcome === "yes" ? "SIM" : "NÃO"}`
+                        )}
                       </Button>
+                      {market.resolved && (
+                        <p className="text-center text-red-500 text-sm">
+                          Mercado já resolvido.
+                        </p>
+                      )}
                     </div>
                   </>
                 ) : (
@@ -448,20 +535,11 @@ export default function MarketDetail() {
                     <p className="text-muted-foreground mb-4">
                       Conecte sua carteira para negociar
                     </p>
-                    <Button className="w-full">
-                      <Wallet className="w-4 h-4" />
-                      Conectar Carteira
-                    </Button>
+                    <div className="flex justify-center">
+                      <ConnectButton />
+                    </div>
                   </div>
                 )}
-              </div>
-
-              {/* My Position */}
-              <div className="glass rounded-xl p-6">
-                <h3 className="font-semibold mb-4">Minha Posição</h3>
-                <div className="text-center py-6 text-muted-foreground">
-                  <p>Você ainda não tem posição neste mercado.</p>
-                </div>
               </div>
             </div>
           </div>

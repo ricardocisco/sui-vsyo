@@ -2,13 +2,14 @@
 
 [move]
 version = 3
-manifest_digest = "BC8734713E1A5B6E18BD9576897C370D99A07D82A019417521C93769E2934388"
-deps_digest = "F9B494B64F0615AED0E98FC12A85B85ECD2BC5185C22D30E7F67786BB52E507C"
+manifest_digest = "7631D84BC26D22E71C461C167578AE23130B3CFF684D710449E3D1C2BE906591"
+deps_digest = "397E6A9F7A624706DBDFEE056CE88391A15876868FD18A88504DA74EB458D697"
 dependencies = [
   { id = "Bridge", name = "Bridge" },
   { id = "MoveStdlib", name = "MoveStdlib" },
   { id = "Sui", name = "Sui" },
   { id = "SuiSystem", name = "SuiSystem" },
+  { id = "usdc", name = "usdc" },
 ]
 
 [[move.package]]
@@ -42,6 +43,33 @@ dependencies = [
   { id = "Sui", name = "Sui" },
 ]
 
+[[move.package]]
+id = "stablecoin"
+source = { git = "https://github.com/circlefin/stablecoin-sui.git", rev = "master", subdir = "packages\\stablecoin" }
+
+dependencies = [
+  { id = "Sui", name = "Sui" },
+  { id = "sui_extensions", name = "sui_extensions" },
+]
+
+[[move.package]]
+id = "sui_extensions"
+source = { git = "https://github.com/circlefin/stablecoin-sui.git", rev = "master", subdir = "packages\\sui_extensions" }
+
+dependencies = [
+  { id = "Sui", name = "Sui" },
+]
+
+[[move.package]]
+id = "usdc"
+source = { git = "https://github.com/circlefin/stablecoin-sui.git", rev = "master", subdir = "packages/usdc" }
+
+dependencies = [
+  { id = "Sui", name = "Sui" },
+  { id = "stablecoin", name = "stablecoin" },
+  { id = "sui_extensions", name = "sui_extensions" },
+]
+
 [move.toolchain-version]
 compiler-version = "1.62.0"
 edition = "2024.beta"
@@ -51,6 +79,12 @@ flavor = "sui"
 
 [env.testnet]
 chain-id = "4c78adac"
-original-published-id = "0x6b862f86480ac0b80cbc3e95c842279e849d4e465509013f876f7e04ce895dc8"
-latest-published-id = "0x6b862f86480ac0b80cbc3e95c842279e849d4e465509013f876f7e04ce895dc8"
+original-published-id = "0x8ed1dc0544cd1ca1bfc0a84876da6e1b3aa643e084a54b6c4516c93b3d59689e"
+latest-published-id = "0x8ed1dc0544cd1ca1bfc0a84876da6e1b3aa643e084a54b6c4516c93b3d59689e"
+published-version = "1"
+
+[env.mainnet]
+chain-id = "35834a8a"
+original-published-id = "0x1fb5d909a93792536688a3b182c203499874ad35ecb114f934567cdf74c8d444"
+latest-published-id = "0x1fb5d909a93792536688a3b182c203499874ad35ecb114f934567cdf74c8d444"
 published-version = "1"
