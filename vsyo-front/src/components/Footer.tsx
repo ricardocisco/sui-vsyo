@@ -1,10 +1,10 @@
 import { Link } from "react-router-dom";
 import {
   TrendingUp,
-  Twitter,
   MessageCircle,
   Github,
-  ExternalLink
+  ExternalLink,
+  X
 } from "lucide-react";
 
 const footerLinks = {
@@ -14,19 +14,19 @@ const footerLinks = {
     { label: "Create Market", href: "/create" }
   ],
   resources: [
-    { label: "Ajuda & FAQ", href: "/help" },
-    { label: "Documentação", href: "/docs" },
+    { label: "Help & FAQ", href: "/help" },
+    { label: "Documentation", href: "/docs" },
     { label: "API", href: "/api" }
   ],
   legal: [
-    { label: "Termos de Serviço", href: "/terms" },
-    { label: "Política de Privacidade", href: "/privacy" },
+    { label: "Terms of Service", href: "/terms" },
+    { label: "Privacy Policy", href: "/privacy" },
     { label: "Disclaimer", href: "/disclaimer" }
   ]
 };
 
 const socialLinks = [
-  { icon: Twitter, href: "https://twitter.com", label: "Twitter" },
+  { icon: X, href: "https://twitter.com", label: "X" },
   { icon: MessageCircle, href: "https://discord.com", label: "Discord" },
   { icon: Github, href: "https://github.com", label: "GitHub" }
 ];
@@ -85,7 +85,7 @@ export function Footer() {
 
           {/* Resources Links */}
           <div>
-            <h4 className="font-semibold text-foreground mb-4">Recursos</h4>
+            <h4 className="font-semibold text-foreground mb-4">Resources</h4>
             <ul className="space-y-3">
               {footerLinks.resources.map((link) => (
                 <li key={link.label}>
@@ -130,13 +130,13 @@ export function Footer() {
               rel="noopener noreferrer"
               className="flex items-center gap-1 hover:text-foreground transition-colors"
             >
-              Contratos
+              Contracts
               <ExternalLink className="w-3 h-3" />
             </a>
             <span>•</span>
             <span className="flex items-center gap-1">
-              <div className="w-2 h-2 rounded-full bg-success animate-pulse-glow" />
-              Rede Ativa
+              <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+              Chain On-line
             </span>
           </div>
         </div>
