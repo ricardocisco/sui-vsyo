@@ -49,8 +49,8 @@ export function FeaturedMarket({
             {/* Stats Row */}
             <div className="flex flex-wrap items-center gap-4 md:gap-6 text-sm mb-6">
               <div className="flex items-center gap-2">
-                <div className="p-2 rounded-lg bg-success/10">
-                  <TrendingUp className="w-4 h-4 text-success" />
+                <div className="p-2 rounded-lg bg-green-500/10">
+                  <TrendingUp className="w-4 h-4 text-green-500" />
                 </div>
                 <div>
                   <div className="font-mono font-bold text-foreground">

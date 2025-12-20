@@ -64,7 +64,7 @@ export function AdminMarketControls({
           {new Date(Number(deadline)).toLocaleString()}) para resolver.
         </div>
       )}
-      <div className="flex gap-4">
+      <div className="flex flex-col md:flex-row gap-4">
         <Button
           className="flex-1 bg-green-600 hover:bg-green-700"
           onClick={() => resolveMarket(adminCapId, marketId, true)}

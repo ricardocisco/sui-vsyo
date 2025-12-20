@@ -1,17 +1,9 @@
-import { Search, Moon, Sun } from "lucide-react";
-import { useState } from "react";
+import { Search } from "lucide-react";
 import { Input } from "./ui/input";
-import { Button } from "./ui/button";
 import { ConnectButton } from "@mysten/dapp-kit";
+import { ModeToggle } from "./ui/mode-toggle";
 
 export function Navbar() {
-  const [darkMode, setDarkMode] = useState(true);
-
-  const toggleTheme = () => {
-    setDarkMode(!darkMode);
-    document.documentElement.classList.toggle("dark");
-  };
-
   return (
     <>
       <header className="sticky top-0 z-50 border-b border-border bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/60">
@@ -54,18 +46,7 @@ export function Navbar() {
                 />
               </div>
 
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={toggleTheme}
-                className="shrink-0"
-              >
-                {darkMode ? (
-                  <Sun className="h-5 w-5" />
-                ) : (
-                  <Moon className="h-5 w-5" />
-                )}
-              </Button>
+              <ModeToggle />
 
               <ConnectButton />
             </div>

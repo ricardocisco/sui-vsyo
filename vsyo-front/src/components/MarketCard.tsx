@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
 import { Loader2, DollarSign } from "lucide-react";
 import { cn } from "../lib/utils";
-import { Button } from "./ui/button"; // Assumindo que você tem um componente Input, senão use <input> html normal
+import { Button } from "./ui/button";
 import { useGetMarket } from "../hooks/useGetMarket";
 import { useBuyYes } from "../hooks/useBuyYes";
 import { useBuyNo } from "../hooks/useBuyNo";

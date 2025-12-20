@@ -156,11 +156,11 @@ export default function MarketDetail() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background flex flex-col">
       <Navbar />
 
-      <main className="py-8">
-        <div className="mx-auto px-4 container">
+      <main className="py-4 flex-1 flex flex-col">
+        <div className="mx-auto px-2 container">
           {/* Back Button */}
           <Link
             to="/"
@@ -174,10 +174,10 @@ export default function MarketDetail() {
             {/* Main Content */}
             <div className="lg:col-span-2 space-y-6">
               {/* Market Header */}
-              <div className="glass rounded-xl p-6">
+              <div className="glass rounded-xl p-2">
                 <div className="flex items-start justify-between gap-4 mb-4">
                   <div>
-                    <span className="stat-pill bg-secondary text-muted-foreground mb-3">
+                    <span className="stat-pill bg-secondary text-muted-foreground mb-3 p-1 rounded-sm">
                       Crypto / Tech{" "}
                       {/* Categoria fixa ou adicionar no contrato depois */}
                     </span>
@@ -188,10 +188,10 @@ export default function MarketDetail() {
                   <div className="shrink-0">
                     <div
                       className={cn(
-                        "stat-pill",
+                        "flex items-center gap-2 rounded-sm px-2 stat-pill",
                         market.resolved
                           ? "bg-red-500/20 text-red-500"
-                          : "bg-success/20 text-success"
+                          : "bg-green-500/20 text-green-500"
                       )}
                     >
                       {market.resolved ? (
@@ -249,8 +249,8 @@ export default function MarketDetail() {
               </div>
 
               {/* Price Chart */}
-              <div className="glass rounded-xl p-6">
-                <div className="flex items-center justify-between mb-6">
+              <div className="glass rounded-xl p-2">
+                <div className="flex flex-col md:flex-row items-center justify-between mb-6">
                   <h2 className="text-lg font-semibold">
                     Histórico (Simulado)
                   </h2>
@@ -353,15 +353,15 @@ export default function MarketDetail() {
             {/* Trading Panel */}
             <div className="space-y-6">
               {/* Probability Display */}
-              <div className="glass rounded-xl p-6">
+              <div className="glass rounded-xl p-2">
                 <h3 className="text-sm text-muted-foreground mb-4">
                   Probabilidades Atuais
                 </h3>
-                <div className="grid grid-cols-2 gap-4 mb-4">
+                <div className="grid grid-cols-2 gap-2 mb-2">
                   <button
                     onClick={() => setSelectedOutcome("yes")}
                     className={cn(
-                      "p-4 rounded-xl border-2 transition-all text-center",
+                      "p-2 rounded-xl border-2 transition-all text-center",
                       selectedOutcome === "yes"
                         ? "border-green-500 bg-green-500/10 glow-green-500"
                         : "border-border hover:border-green-500/50"
@@ -388,7 +388,7 @@ export default function MarketDetail() {
                   <button
                     onClick={() => setSelectedOutcome("no")}
                     className={cn(
-                      "p-4 rounded-xl border-2 transition-all text-center",
+                      "p-2 rounded-xl border-2 transition-all text-center",
                       selectedOutcome === "no"
                         ? "border-destructive bg-destructive/10 glow-destructive"
                         : "border-border hover:border-destructive/50"
@@ -496,7 +496,7 @@ export default function MarketDetail() {
                           <span className="text-muted-foreground">
                             Retorno potencial
                           </span>
-                          <span className="font-mono text-success">
+                          <span className="font-mono text-green-500">
                             +${potentialProfit}
                           </span>
                         </div>

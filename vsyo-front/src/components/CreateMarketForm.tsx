@@ -23,7 +23,7 @@ export function CreateMarketForm({ adminCapId }: { adminCapId: string }) {
   const account = useCurrentAccount();
   const [desc, setDesc] = useState("");
   const [days, setDays] = useState(7);
-  const [liquidity, setLiquidity] = useState(100); // Valor em cents (ex: 100 = 1 USDC)
+  const [liquidity, setLiquidity] = useState(100);
 
   // Busca o objeto Coin<USDC> do usuário para usar na criação
   const { data: allCoins } = useSuiClientQuery("getAllCoins", {
