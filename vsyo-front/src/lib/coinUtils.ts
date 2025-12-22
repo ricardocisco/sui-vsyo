@@ -1,8 +1,8 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { Transaction } from "@mysten/sui/transactions";
 
 export const splitCoinByAmount = (
   tx: Transaction,
-  coinType: string,
   amount: bigint,
   allCoins: any[]
 ) => {

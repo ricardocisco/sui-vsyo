@@ -14,6 +14,7 @@ export function useGetMarket(marketId: string) {
       select: (data) => {
         if (data.data?.content?.dataType === "moveObject") {
           return data.data.content.fields as {
+            id: string;
             description: string;
             deadline: string;
             yes_shares_sold: string;

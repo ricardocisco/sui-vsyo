@@ -1,4 +1,3 @@
-import { useState } from "react";
 import {
   Landmark,
   Bitcoin,
@@ -34,14 +33,11 @@ export function CategoryNav({
   selectedCategory,
   onCategoryChange
 }: CategoryNavProps) {
-  const [scrollPosition, setScrollPosition] = useState(0);
-
   const handleScroll = (direction: "left" | "right") => {
     const container = document.getElementById("category-scroll");
     if (container) {
       const scrollAmount = direction === "left" ? -200 : 200;
       container.scrollBy({ left: scrollAmount, behavior: "smooth" });
-      setScrollPosition(container.scrollLeft + scrollAmount);
     }
   };
 

@@ -274,7 +274,7 @@ export default function MarketDetail() {
                 <div className="my-4">
                   {market && (
                     <AdminMarketControls
-                      marketId={market.id.id}
+                      marketId={market.id}
                       isResolved={market.resolved}
                       deadline={market.deadline}
                     />
