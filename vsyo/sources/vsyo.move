@@ -24,6 +24,7 @@ public struct AdminCap has key, store {
 public struct Market has key, store {
     id: UID,
     description: String,
+    market_type: String,
     deadline: u64,
     // Fixed price shares
     yes_shares_sold: u64,
@@ -44,6 +45,7 @@ public struct Position has key, store {
 public struct MarketCreated has copy, drop {
     market_id: ID,
     description: String,
+    market_type: String,
     deadline: u64,
 }
 
@@ -86,6 +88,7 @@ fun init(ctx: &mut TxContext) {
 public fun create_market(
     _: &AdminCap,
     description: String,
+    market_type: String,
     deadline: u64,
     initial_liquidity: Coin<USDC>,
     ctx: &mut TxContext,
@@ -96,6 +99,7 @@ public fun create_market(
     let market = Market {
         id: object::new(ctx),
         description,
+        market_type,
         deadline,
         yes_shares_sold: 0,
         no_shares_sold: 0,
@@ -107,6 +111,7 @@ public fun create_market(
     event::emit(MarketCreated {
         market_id: object::uid_to_inner(&market.id),
         description: market.description,
+        market_type: market.market_type,
         deadline: market.deadline,
     });
     transfer::share_object(market)

@@ -17,11 +17,14 @@ import {
 } from "./ui/card";
 import { Alert, AlertDescription, AlertTitle } from "./ui/alert";
 import { AlertCircle, Calendar, DollarSign, Rocket, Type } from "lucide-react";
+import { cn } from "../lib/utils";
+import { MARKET_TYPES } from "../constants";
 
 export function CreateMarketForm({ adminCapId }: { adminCapId: string }) {
   const { createMarket } = useCreateMarket();
   const account = useCurrentAccount();
   const [desc, setDesc] = useState("");
+  const [type, setType] = useState("");
   const [days, setDays] = useState(7);
   const [liquidity, setLiquidity] = useState(100);
 
@@ -65,10 +68,22 @@ export function CreateMarketForm({ adminCapId }: { adminCapId: string }) {
       return;
     }
 
+    if (!type) {
+      alert("Por favor, selecione um tipo para o mercado.");
+      return;
+    }
+
     // Calcula deadline em ms
     const deadlineMs = Date.now() + days * 24 * 60 * 60 * 1000;
 
-    createMarket(adminCapId, desc, deadlineMs, liquidity, coin.coinObjectId);
+    createMarket(
+      adminCapId,
+      desc,
+      type,
+      deadlineMs,
+      liquidity,
+      coin.coinObjectId
+    );
   };
 
   return (
@@ -100,6 +115,34 @@ export function CreateMarketForm({ adminCapId }: { adminCapId: string }) {
           />
           <p className="text-xs text-muted-foreground">
             Seja específico para evitar ambiguidades na resolução.
+          </p>
+        </div>
+
+        {/* Input Tipo */}
+        <div className="space-y-2">
+          <Label htmlFor="type" className="flex items-center gap-2">
+            <Type className="w-4 h-4 text-muted-foreground" />
+            Tipo do Mercado
+          </Label>
+          <div className="flex flex-wrap gap-2 p-3 rounded-lg border border-border bg-secondary/30">
+            {MARKET_TYPES.map((marketType) => (
+              <button
+                key={marketType}
+                type="button"
+                onClick={() => setType(marketType)}
+                className={cn(
+                  "px-3 py-1.5 text-sm rounded-md transition-colors",
+                  type === marketType
+                    ? "bg-primary text-primary-foreground font-medium"
+                    : "bg-background text-muted-foreground hover:text-foreground hover:bg-secondary border border-border"
+                )}
+              >
+                {marketType}
+              </button>
+            ))}
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Selecione uma categoria para facilitar a filtragem.
           </p>
         </div>
 
@@ -163,7 +206,7 @@ export function CreateMarketForm({ adminCapId }: { adminCapId: string }) {
         <Button
           className="w-full text-lg py-6 font-semibold shadow-lg hover:shadow-primary/20 transition-all"
           onClick={handleCreate}
-          disabled={!adminCapId || !desc}
+          disabled={!adminCapId || !desc || !type}
         >
           {adminCapId
             ? "Lançar Mercado na Blockchain"

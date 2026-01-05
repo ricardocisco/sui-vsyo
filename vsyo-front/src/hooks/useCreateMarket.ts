@@ -8,6 +8,7 @@ export function useCreateMarket() {
   const createMarket = (
     adminCapId: string,
     description: string,
+    type: string,
     deadlineMs: number,
     initialLiquidityAmount: number,
     usdcCoinId: string // ID do objeto Coin<USDC> para liquidez inicial
@@ -24,6 +25,7 @@ export function useCreateMarket() {
       arguments: [
         tx.object(adminCapId),
         tx.pure.string(description),
+        tx.pure.string(type),
         tx.pure.u64(deadlineMs),
         liquidityCoin
       ],

@@ -6,6 +6,7 @@ import { useGetMarket } from "../hooks/useGetMarket";
 import { useBuyYes } from "../hooks/useBuyYes";
 import { useBuyNo } from "../hooks/useBuyNo";
 import { useState } from "react";
+import { MarketTypeIcon } from "./MarketTypeIcon";
 
 const COIN_DECIMALS = 6;
 const DECIMAL_FACTOR = Math.pow(10, COIN_DECIMALS);
@@ -34,7 +35,7 @@ export function MarketCard({
 
   if (isPending || !market) {
     return (
-      <div className="h-full rounded-xl border border-border/50 bg-background/50 p-4 flex items-center justify-center">
+      <div className="h-full rounded-xl border border-border bg-card p-4 flex items-center justify-center">
         <Loader2 className="animate-spin text-muted-foreground" />
       </div>
     );
@@ -87,21 +88,32 @@ export function MarketCard({
         className="
         relative h-full flex flex-col
         rounded-xl
-        border border-border/50
-        bg-background/80
+        border border-border
+        bg-card
         backdrop-blur
         p-4
-        hover:bg-background/90
-        hover:border-border/80
+        hover:bg-secondary
+        hover:border-border
         transition-all duration-200
     "
       >
         {/* Header */}
         <div className="flex items-start gap-3 mb-4">
-          <div className="w-10 h-10 rounded-lg bg-secondary/50 flex items-center justify-center shrink-0 text-xl border border-border/50">
-            {icon}
+          <div className="w-10 h-10 rounded-lg bg-secondary flex items-center justify-center shrink-0 border border-border text-primary">
+            {market.market_type ? (
+              <MarketTypeIcon type={market.market_type} className="w-6 h-6" />
+            ) : (
+              <span className="text-xl">{icon}</span>
+            )}
           </div>
           <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 mb-1">
+              {market.market_type && (
+                <span className="text-xs text-muted-foreground px-2 py-0.5 rounded bg-secondary border border-border">
+                  {market.market_type}
+                </span>
+              )}
+            </div>
             <h3
               className={cn(
                 "text-sm font-medium leading-snug text-foreground line-clamp-2",
@@ -125,7 +137,7 @@ export function MarketCard({
         <div className="flex-1 flex flex-col justify-end space-y-3 mb-4">
           {/* NOVO: Input de Valor de Aposta */}
           <div
-            className="flex items-center gap-2 bg-secondary/30 p-1.5 rounded-md border border-border/50"
+            className="flex items-center gap-2 bg-secondary p-1.5 rounded-md border border-border"
             onClick={handleInputClick} // Impede navegação ao clicar no container
           >
             <DollarSign className="w-4 h-4 text-muted-foreground ml-1" />
@@ -206,7 +218,7 @@ export function MarketCard({
         </div>
 
         {/* Footer */}
-        <div className="mt-auto pt-3 border-t border-border/50 flex items-center justify-between text-xs text-muted-foreground">
+        <div className="mt-auto pt-3 border-t border-border flex items-center justify-between text-xs text-muted-foreground">
           <div className="flex items-center gap-2">
             <span className="font-medium text-foreground">
               {volumeUSD} Vol.

@@ -1,8 +1,8 @@
 export const PACKAGE_ID =
-  "0x8ed1dc0544cd1ca1bfc0a84876da6e1b3aa643e084a54b6c4516c93b3d59689e";
+  "0xfcf8d4cfc84b6ede1ca166b5e149e55eb05e2371452ab115b5d32ca7cca00d7a";
 export const MODULE_NAME = "vsyo";
 export const ADMIN_CAP_ID =
-  "0x9c7a06fc265ec6d2072c298d25c4eeb4404433c9be8b94b60c8d57c31ffa6879";
+  "0xd9d1f985e9d0f628a5ffec2d7b7cfde5f358a79585c6998101666f0e4ba6f751";
 
 // Substitua pelo tipo do USDC que você usou no contrato (ex: devnet USDC ou moeda mock)
 export const USDC_TYPE =
@@ -16,3 +16,22 @@ export const TYPES = {
   POSITION: `${PACKAGE_ID}::${MODULE_NAME}::Position`,
   ADMIN_CAP: `${PACKAGE_ID}::${MODULE_NAME}::AdminCap`
 };
+
+// Tipos de mercado disponíveis para criação e filtragem
+export const MARKET_TYPES = [
+  "Politics",
+  "Sports",
+  "Crypto",
+  "Finance",
+  "Geopolitics",
+  "Earnings",
+  "Tech",
+  "Culture",
+  "World",
+  "Economy",
+  "Climate & Science",
+  "Elections",
+  "Breaking",
+  "New",
+  "Trending"
+];

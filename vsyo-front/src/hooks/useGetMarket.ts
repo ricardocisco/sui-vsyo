@@ -16,6 +16,7 @@ export function useGetMarket(marketId: string) {
           return data.data.content.fields as {
             id: string;
             description: string;
+            market_type: string;
             deadline: string;
             yes_shares_sold: string;
             no_shares_sold: string;

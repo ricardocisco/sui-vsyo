@@ -177,10 +177,11 @@ export default function MarketDetail() {
               <div className="glass rounded-xl p-2">
                 <div className="flex items-start justify-between gap-4 mb-4">
                   <div>
-                    <span className="stat-pill bg-secondary text-muted-foreground mb-3 p-1 rounded-sm">
-                      Crypto / Tech{" "}
-                      {/* Categoria fixa ou adicionar no contrato depois */}
-                    </span>
+                    {market.market_type && (
+                      <span className="stat-pill bg-secondary text-muted-foreground mb-3 p-1 rounded-sm">
+                        {market.market_type}
+                      </span>
+                    )}
                     <h1 className="text-2xl md:text-3xl font-bold text-foreground mt-2">
                       {market.description}
                     </h1>
