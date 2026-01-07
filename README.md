@@ -1,5 +1,8 @@
 # VSYO — Prediction Market on SUI
 
+![License](https://img.shields.io/badge/license-MIT-blue)
+![Build](https://img.shields.io/badge/build-passing-success)
+
 VSYO é um projeto de **prediction market** desenvolvido na rede **Sui**. O foco é estritamente educacional, servindo como laboratório para explorar a implementação de contratos inteligentes baseados em AMM (Automated Market Maker) usando a linguagem Move.
 
 ## 🧩 Contexto
@@ -19,7 +22,7 @@ Explorar a engenharia de um prediction market funcional, abordando:
 > ⚠️ **Nota:** O foco do projeto não é financeiro ou comercial, mas sim técnico e conceitual.
 
 ## ⚖️ Arquitetura do AMM (Automated Market Maker)
-Diferente de exchanges tradicionais onde um comprador precisa esperar um vendedor (Order Book), o VSYO utiliza um AMM. Isso significa que os usuários negociam contra um **Smart Contract (Liquidity Pool)**.
+Diferente de exchanges tradicionais onde um comprador precisa esperar um vendedor (Order Book), a VSYO utiliza um AMM. Isso significa que os usuários negociam contra um **Smart Contract (Liquidity Pool)**.
 
 ### Como funciona a lógica no contrato:
 1.  **Pools de Liquidez:** Cada mercado possui duas "reservas" de valor, uma para o resultado `SIM` e outra para o `NÃO`.
